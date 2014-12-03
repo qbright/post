@@ -1,0 +1,151 @@
+---
+layout: post
+title: "Backbone学习 --- Backbone.Events"
+date: 2014-12-04 14:45:04 +0800
+comments: true
+categories:  ["backbone","js"]
+---
+
+Backbone.Events为Backbone的核心部分，它在backbone的其他部分（View、Controller、Model ...）被使用，在Backbone的MVC中作为Controller存在，通过事件机制对数据和视图进行控制。
+
+###backbone.Events的作用
+Events 可以作为一个模块在其他的对象中使用(无论是不是Backbone中定义的),也可以被单独使用`var event = {};_.extend(event,Backbone.Events)`;
+
+###Events api
+Events 对象提供了以下api
+
+![](http://img.hb.aicdn.com/ac999a3df3c134edb26e6a945a5f081cb1680981586-sDSNhY_fw658)
+
+所有的方法调用会返回events对象
+![](http://img.hb.aicdn.com/7d62a9bfd5472b586953a2412a2e27b1a0ba300aa178-c16rEa_fw658)
+
+其中除了各种方法之外，会有一个 `_events`属性存储所有该Events对象中绑定的自定义事件，每个事件包含一个数组，里面存储着所有这个事件名称上定义的回调函数，结构如下：
+
+![](http://img.hb.aicdn.com/0894846c47f2626fb4c5e7e4e3e9637634ec0c172b80-Zq9uqV_fw658)
+
+其中 `callback` 为回调函数 , `context`为调用回调函数`this`指向的域 , `ctx` 为 events对象。
+
+下面我们分析下方法的调用过程：
+
+####on   `object.on(event,callback,[context]) Alias:bind`
+`on`方法用于绑定一个事件，在事件被触发的时候，绑定的回调函数会被触发，类似于DOM元素的事件机制，当然`backbone`支持自定义事件。下面我们看看`on`的实现代码：
+
+	on: function(name, callback, context) {
+      if (!eventsApi(this, 'on', name, [callback, context]) || !callback) return this;
+      this._events || (this._events = {});
+      var events = this._events[name] || (this._events[name] = []);
+      events.push({callback: callback, context: context, ctx: context || this});
+      return this;
+    }
+
+当调用`on`方法的时候，方法会先调用 `eventApi`
+
+	var eventsApi = function(obj, action, name, rest) {
+	    if (!name) return true;
+	
+	    // Handle event maps.
+	    if (typeof name === 'object') {
+	      for (var key in name) {
+	        obj[action].apply(obj, [key, name[key]].concat(rest));
+	      }
+	      return false;
+	    }
+	
+	    // Handle space separated event names.
+	    if (eventSplitter.test(name)) {
+	      var names = name.split(eventSplitter);
+	      for (var i = 0, l = names.length; i < l; i++) {
+	        obj[action].apply(obj, [names[i]].concat(rest));
+	      }
+	      return false;
+	    }
+	
+	    return true;
+  	};
+
+我们可以看到主要是用于检测有没有一次绑定多个事件 如： `object.on("event1 event2"，function(){})`、或者 `object.on({"event1":function(){},"event2":function(){}})`，如果是这种绑定事件的话，eventsApi将会对多个事件进行分解，分别调用 `on` 事件进行绑定。
+
+加下去会判断有没有内部的_events属性，没有的话创建一个`object`，然后再判断有没有_events属性中有没有对应事件名，如果没有创建一个数组，然后push进去事件，返回一个Events对象，完成绑定。
+
+####once `object.once(event,callback, [context])`
+`once`方法类似于`on`方法,区别在于使用 `once`绑定的事件只会执行一次，原因在于 `once` 方法中存在一个包装器，将回调函数进行了二次的封装，如下下:
+
+	 var once = _.once(function() {
+        self.off(name, once);
+        callback.apply(this, arguments);
+      });
+
+可以看到`callback`在被调用前先执行了`off`方法 ，解除事件的绑定，因此只能执行一次
+
+####off `object.on([event],[callback],[context]) Alias unbind`
+`off`方法主要用于事件的解除，实现代码如下：
+
+	  off: function(name, callback, context) {
+	      var retain, ev, events, names, i, l, j, k;
+	      if (!this._events || !eventsApi(this, 'off', name, [callback, context])) return this;
+	      if (!name && !callback && !context) {
+	        this._events = void 0;
+	        return this;
+	      }
+	      names = name ? [name] : _.keys(this._events);
+	      for (i = 0, l = names.length; i < l; i++) {
+	        name = names[i];
+	        if (events = this._events[name]) {
+	          this._events[name] = retain = [];
+	          if (callback || context) {
+	            for (j = 0, k = events.length; j < k; j++) {
+	              ev = events[j];
+	              if ((callback && callback !== ev.callback && callback !== ev.callback._callback) ||
+	                  (context && context !== ev.context)) {
+	                retain.push(ev);
+	              }
+	            }
+	          }
+	          if (!retain.length) delete this._events[name];
+	        }
+	      }
+	      return this;
+    }
+进入函数之后会对是否解除多个事件调用 `eventsApi` 进行检查（类似 `on`），接着检查有没有传入 `name` 、`callback` 、`context`，如果都没有，着直接将`_events`属性置空，解绑完成 。
+如果存在以上参数，则检查`name`属性，如果没有则将所有的events中的事件名赋值给`names`， 然后循环检查 `callback`，如果不存在`callback`或者 `context`，则直接删除相关事件，如果存在这判断`callback`或者 `context`是否和对应的事件的`callback`或者 `context`相同，则重新建事件加回去。
+
+这个删除的流程是先删除，然后在判断，如果符合条件再加回来。
+
+####trigger `object.trigger(event,[*args])`
+`trigger`方法主要用于将绑定好的事件进行触发，代码如下：
+
+	
+	trigger: function(name) {
+      if (!this._events) return this;
+      var args = slice.call(arguments, 1);
+      if (!eventsApi(this, 'trigger', name, args)) return this;
+      var events = this._events[name];
+      var allEvents = this._events.all;
+      if (events) triggerEvents(events, args);
+      if (allEvents) triggerEvents(allEvents, arguments);
+      return this;
+    }
+	
+`trigger`方法首先对参数进行分割 , 将自定义参数的放入 `args` 中 , 然后进行 `eventApi` 检查,再从`_events`中 获取对应的事件，再获取 `all`事件，然后进行触发调用 `triggerEvents`, 代码如下：
+
+	 var triggerEvents = function(events, args) {
+	    var ev, i = -1, l = events.length, a1 = args[0], a2 = args[1], a3 = args[2];
+	    switch (args.length) {
+	      case 0: while (++i < l) (ev = events[i]).callback.call(ev.ctx); return;
+	      case 1: while (++i < l) (ev = events[i]).callback.call(ev.ctx, a1); return;
+	      case 2: while (++i < l) (ev = events[i]).callback.call(ev.ctx, a1, a2); return;
+	      case 3: while (++i < l) (ev = events[i]).callback.call(ev.ctx, a1, a2, a3); return;
+	      default: while (++i < l) (ev = events[i]).callback.apply(ev.ctx, args); return;
+    }
+  };
+		
+从中可以出在自定义参数小于等于三个的时候，使用call,超过三个参数才使用apply进行调用，代码中的注释是这么去解释的：
+
+ 	A difficult-to-believe, but optimized internal dispatch function for
+	triggering events. Tries to keep the usual cases speedy (most internal
+	Backbone events have 3 arguments)
+
+大概就是说这么做是为了做一个优化，保持通畅情况下的代码执行速度
+  
+------------------------
+上面就是对Events对象进行总结，可以看出Events对象从api看是非常简单的，但是它缺链接这backbone的方方面面，下面我们的讲的其他Backbone模块中其实都能看到Events的身影，

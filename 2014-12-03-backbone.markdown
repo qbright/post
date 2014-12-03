@@ -1,0 +1,21 @@
+---
+layout: post
+title: "backbone 学习 --- 简介 "
+date: 2014-12-03 16:46:22 +0800
+comments: true
+categories: ["backbone","js"]
+---
+
+
+
+
+###什么是Backbone
+backbone 是一个轻量级的MVC框架，它可以非常容易的管理和解耦应用，使你更加容易的维护代码
+<! -- more -->
+Backbone提供了一个最小集的数据结构(Models, Collections)和用户接口(Views, URLs)这些对于构建动态的JavaScript应用非常有用的基本实体。它并不是武断的，意思就是说你可以自由和灵活的以你自己认为舒服的方式来构建web应用。你也可以使用它规定的体系结构，或者扩展它以适合你的需求。
+
+这个框架不关注widgets或者是另一种构建对象的方式——它只提供在应用中处理和查询数据的一套工具。它也不规定使用某个特定的模板引擎——不过你可以自由的使用由Underscore.js(其依赖项之一)提供的Micro-templating，views(视图)也可以使用你自己选择的模板方案绑定到HTML结构。
+
+接下去将会从Event、Model、Collection、View等几个模块进行解析和源码阅读。基于 backbone 1.1.2
+###目录
+1. [Backbone.Event](blog/2014/12/04/backbone.Events/index.html)

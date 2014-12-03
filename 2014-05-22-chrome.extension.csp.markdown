@@ -1,0 +1,74 @@
+---
+layout: post
+title: "内容安全策略(CSP)"
+date: 2014-05-22 19:05:55 +0800
+comments: true
+categories: ["Chrome extension"]
+---
+### 简介
+
+> [Content Security Policy(CSP)][1] 是一种计算机安全的概念 , 用来防御跨站脚本攻击[(XSS)][2] , 现在他是W3C网络应用安全的候选标准,CPS 提供了一种标准的HTTP头让网站去声明允许那些资源加载到自己的网页之中 , 能够控制到 JavaScript , CSS , HTML , Frames , fonts , image , embeddable object , Java applets , ActiveX , audio 和video 等类型的资源。CSP 刚开始是由 [Mozilla 基金会][3] 制定并实现在 Firefox4 中,下面为CSP各种**部分实现**的版本:
+> 
+> > *   Content-Security-Policy : W3C推荐的标准的头部命名 , 被 Chrome 25 , Firefox 23 支持。
+> > *   X-WebKit-CSP : 在 2011 年被Chrome和基于WebKit内核的浏览器所支持。
+> > *   X-Content-Security-Policy : 被 Gecko2 内核的浏览器Firefox 4 、Thunderbird 3.3 SeaMonkey2.1 支持。在 IE10 和 IE11 的沙箱模式中也支持这种头部。 另外一些框架也支持CSP , 例如 [AngularJs][4] 和 [Django][5]
+<!-- more -->
+### 规则
+
+> 这里主要谈谈CSP在Chrome extension中的应用 , 在通常情况下 , CSP通过黑白名单的机制控制资源的加载和执行脚本 , 为Chrome extension 提供一种定制的策略 , 由开发者去确定哪些资源是Chrome extension 需要被访问的 , 这些策略在Chrome extension 的 host permission 上提供另外一层保护。上面说到，在Web上这个策略是通过HTTP头或meta元素定义的 , 在 Chrome extension 中 , 不存在这两种方式 , 扩展是通过 **manifest.json** 文件定义的:
+> 
+>  `{"content_security_policy": "[POLICY STRING GOES HERE]" }`
+> 
+> #### 默认安全策略
+> 
+> > 没有定义 **manifest.json** 文件中的 **manifest_version** 字段默认是没有安全策略的，只有定义了 manifest_version 为 2 的扩展才会启用默认的内容安全策略。(现版本的chrome extension 都强制需要指定 manifest_version 的值为 2 )。
+> > 
+> > > 默认的安全策略为：**script-src ' self ' ; object-src ' self '**,  具体策略如下：
+********************
+> > > **不执行 Inline JavaScript**
+> > > > Inline JavaScript 不会在页面被执行 , 这个规则同时禁止内嵌 **`<script>`** 标签 和 元素的内联事件 (例如:**`< button onclick="XXX">`**); 当使用 Inline JavaScript 的时候 , Chrome extension 会抛出 **Refused to execute inline script because it violates the following Content Security Policy directive: ... "** 错误。
+>>>>>注意：当使用jquery的ajax方法时，如果将dataType指定为**script** 时 , 也会被CSP规则拦截。
+> #### 只加载本地脚本和资源
+>> 在Chrome extension 中，只有扩展包类的脚本和资源才会被加载, 这确保了扩展只执行已经打包在扩展之中的可信代码，从而避免了向上的网络攻击者通过恶意重定向您所请求的Web资源所带来的安全隐患。因此，在使用JQuery等第三方库或者框架时，应该在扩展包中引入这个源文件，而不能通过外部的内容分发网络（CDN）进行在线加载。也就是说，在页面不能出现：
+	<script src="http://ajax.googleapis.com/ajax
+		/libs/jquery/2.0.1/jquery.min.js"></script>
+    只能把源文件下载到扩展包中,通过相对路径去引用 ：
+    **`<script src="jquery.min.js" ></script >`**
+
+> 更改默认的权限配置
+>> 首先 , 在chrome extension 中，没有任何办法绕过 **禁止 Inline JavaScript** 的限制,对于第二个限制 **只加载本地脚本和资源** ,可以通过将 **HTTPS** 源的脚本加入到配置的白名单中来放宽策略的限制。另外白名单不支持**HTTP**协议的源。
+如果要允许加载来自Https://example.com 的脚本需要把配置改为:
+>>
+>`{
+        "content_security_policy": "script-src 'self' https://example.com ; object-src 'self'" 
+    }`
+    
+>>需要指出的是 chrome extension 中 script-src 和object-src 都是需要配置的。
+
+>下面为所有能够进行配置的资源项字段:
+
+> * default-src : 这个配置对所有的资源文件生效
+* script-src : 这个配置匹配所有的javascript资源, 默认情况下阻止所有对远程资源的引用(除非加上白名单引用https源) , 禁止执行inline script 和 eval() 方法,除非你指定了 unsafe-inline 和 unsafe-eval 配置。
+* object-src : 这个配置对所有 &lt;object&gt; &lt;embed&gt; &lt;applet&gt; 标签引用的源进行限制
+* img-src : 这个配置对所有图片和favicons起效
+* media-src : 这个配置对所有的 &lt;audio&gt; 和 &lt;video &gt; 标签引用的资源起效
+* frame-src : 这个配置对所有的 &lt;frame&gt; 和 &lt;iframe&gt; 标签引用的资源起效
+* font-src : 这个配置对@font-face 应用的资源起效
+* connect-src : 这个配置对XMLHttpRequest 请求的资源起效
+* style-src : 这个配置对 &lt;style &gt; 标签引用的资源起效
+* report-uri ： 这个配置用于指定一个url , 在检测到违反Chrome extension CSP配置的时候进行信息上报。
+>>report 上报的信息有：
+>>> * document-uri : 违反规则的页面URI
+* referrer : 违反规则的页面的referrer
+* blocked-uri : 违反规则的请求链接uri
+* violated-directive : 违反的规则名称
+
+###开发时对于CSP的注意事项
+>在开发的过程中也因为CSP的限制遇到了一些问题, 首先是在开发YY音乐台的过程中，之前制定好的方法是将YY音乐台整个打包到扩展之中，但是由于CSP的限制，其中的音频，视频的flash资源都不能通过外部接口去请求，由于各种原因音频视频的资源无法使用https的服务,最后采用的折中策略就是将YY音乐台部署在线上，需要和浏览器交互的部分使用 content_script 进行注入控制进行交互，这样做绕过了CSP的限制，但是由于是一个线上的Web应用程序，在开发过程中做出浏览器兼容性的调整，而且由于线上更新和浏览器版本的更新存在时间差 , 还要对浏览器扩展的版本做出兼容 , 所以在开发的时候需要权衡各方面的开发成本。
+    
+>如果确实需要应用外部的http的资源，其实还有个比较绕弯的方法，就是通过ajax请求将资源请求回来，然后用过 `chrome.tabs.executescript` 或者 `chrome.tabs.insertCSS` 进行资源插入 , 从而到达运行的目的 (不知道这算不算是一个Chrome extension 权限策略的漏洞= =)
+ [1]: https://w3c.github.io/webappsec/specs/content-security-policy/
+ [2]: http://en.wikipedia.org/wiki/Cross-site_scripting
+ [3]: http://en.wikipedia.org/wiki/Mozilla_Foundation
+ [4]: https://angularjs.org/
+ [5]: https://www.djangoproject.com/
