@@ -32,7 +32,7 @@ Events 对象提供了以下api
 
 ####on   `object.on(event,callback,[context]) Alias:bind`
 `on`方法用于绑定一个事件，在事件被触发的时候，绑定的回调函数会被触发，类似于DOM元素的事件机制，当然`backbone`支持自定义事件。下面我们看看`on`的实现代码：
-
+{% codeblock [lang:javascript ] [on]%}
 	on: function(name, callback, context) {
       if (!eventsApi(this, 'on', name, [callback, context]) || !callback) return this;
       this._events || (this._events = {});
@@ -40,9 +40,9 @@ Events 对象提供了以下api
       events.push({callback: callback, context: context, ctx: context || this});
       return this;
     }
-
+{% endcodeblock %}
 当调用`on`方法的时候，方法会先调用 `eventApi`
-
+{% codeblock [lang:javascript ] [eventApi]%}
 	var eventsApi = function(obj, action, name, rest) {
 	    if (!name) return true;
 	
@@ -65,24 +65,24 @@ Events 对象提供了以下api
 	
 	    return true;
   	};
-
+{% endcodeblock %}
 我们可以看到主要是用于检测有没有一次绑定多个事件 如： `object.on("event1 event2"，function(){})`、或者 `object.on({"event1":function(){},"event2":function(){}})`，如果是这种绑定事件的话，eventsApi将会对多个事件进行分解，分别调用 `on` 事件进行绑定。
 
 加下去会判断有没有内部的_events属性，没有的话创建一个`object`，然后再判断有没有_events属性中有没有对应事件名，如果没有创建一个数组，然后push进去事件，返回一个Events对象，完成绑定。
 
 ####once `object.once(event,callback, [context])`
 `once`方法类似于`on`方法,区别在于使用 `once`绑定的事件只会执行一次，原因在于 `once` 方法中存在一个包装器，将回调函数进行了二次的封装，如下下:
-
+{% codeblock [lang:javascript ] [once]%}
 	 var once = _.once(function() {
         self.off(name, once);
         callback.apply(this, arguments);
       });
-
+{% endcodeblock %}
 可以看到`callback`在被调用前先执行了`off`方法 ，解除事件的绑定，因此只能执行一次
 
 ####off `object.on([event],[callback],[context]) Alias unbind`
 `off`方法主要用于事件的解除，实现代码如下：
-
+{% codeblock [lang:javascript ] [off]%}
 	  off: function(name, callback, context) {
 	      var retain, ev, events, names, i, l, j, k;
 	      if (!this._events || !eventsApi(this, 'off', name, [callback, context])) return this;
@@ -109,6 +109,7 @@ Events 对象提供了以下api
 	      }
 	      return this;
     }
+{% endcodeblock %}
 进入函数之后会对是否解除多个事件调用 `eventsApi` 进行检查（类似 `on`），接着检查有没有传入 `name` 、`callback` 、`context`，如果都没有，着直接将`_events`属性置空，解绑完成 。
 如果存在以上参数，则检查`name`属性，如果没有则将所有的events中的事件名赋值给`names`， 然后循环检查 `callback`，如果不存在`callback`或者 `context`，则直接删除相关事件，如果存在这判断`callback`或者 `context`是否和对应的事件的`callback`或者 `context`相同，则重新建事件加回去。
 
@@ -116,8 +117,7 @@ Events 对象提供了以下api
 
 ####trigger `object.trigger(event,[*args])`
 `trigger`方法主要用于将绑定好的事件进行触发，代码如下：
-
-	
+{% codeblock [lang:javascript ] [trigger]%}	
 	trigger: function(name) {
       if (!this._events) return this;
       var args = slice.call(arguments, 1);
@@ -128,9 +128,9 @@ Events 对象提供了以下api
       if (allEvents) triggerEvents(allEvents, arguments);
       return this;
     }
-	
+{% endcodeblock %}	
 `trigger`方法首先对参数进行分割 , 将自定义参数的放入 `args` 中 , 然后进行 `eventApi` 检查,再从`_events`中 获取对应的事件，再获取 `all`事件，然后进行触发调用 `triggerEvents`, 代码如下：
-
+{% codeblock [lang:javascript ] [triggerEvents]%}
 	 var triggerEvents = function(events, args) {
 	    var ev, i = -1, l = events.length, a1 = args[0], a2 = args[1], a3 = args[2];
 	    switch (args.length) {
@@ -139,9 +139,9 @@ Events 对象提供了以下api
 	      case 2: while (++i < l) (ev = events[i]).callback.call(ev.ctx, a1, a2); return;
 	      case 3: while (++i < l) (ev = events[i]).callback.call(ev.ctx, a1, a2, a3); return;
 	      default: while (++i < l) (ev = events[i]).callback.apply(ev.ctx, args); return;
-    }
-  };
-		
+    	}
+  	}
+{% endcodeblock %}			
 从中可以出在自定义参数小于等于三个的时候，使用call,超过三个参数才使用apply进行调用，代码中的注释是这么去解释的：
 
  	A difficult-to-believe, but optimized internal dispatch function for
