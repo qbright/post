@@ -11,4 +11,4 @@ categories: ["backbone","js"]
 <!-- more -->
 
 ###目录
-1. [Backbone.Event](blog/2014/12/04/backbone.Events/index.html)
+1. [Backbone.Event](http://qbright.github.io/blog/2014/12/04/backbone.Events/)
