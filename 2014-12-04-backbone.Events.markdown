@@ -32,7 +32,7 @@ Events 对象提供了以下api
 
 ####on   `object.on(event,callback,[context]) Alias:bind`
 `on`方法用于绑定一个事件，在事件被触发的时候，绑定的回调函数会被触发，类似于DOM元素的事件机制，当然`backbone`支持自定义事件。下面我们看看`on`的实现代码：
-{% codeblock [lang:javascript ] [on]%}
+{% codeblock lang:javascript %}
 	on: function(name, callback, context) {
       if (!eventsApi(this, 'on', name, [callback, context]) || !callback) return this;
       this._events || (this._events = {});
@@ -42,7 +42,7 @@ Events 对象提供了以下api
     }
 {% endcodeblock %}
 当调用`on`方法的时候，方法会先调用 `eventApi`
-{% codeblock [lang:javascript ] [eventApi]%}
+{% codeblock lang:javascript %}
 	var eventsApi = function(obj, action, name, rest) {
 	    if (!name) return true;
 	
@@ -72,7 +72,7 @@ Events 对象提供了以下api
 
 ####once `object.once(event,callback, [context])`
 `once`方法类似于`on`方法,区别在于使用 `once`绑定的事件只会执行一次，原因在于 `once` 方法中存在一个包装器，将回调函数进行了二次的封装，如下下:
-{% codeblock [lang:javascript ] [once]%}
+{% codeblock lang:javascript %}
 	 var once = _.once(function() {
         self.off(name, once);
         callback.apply(this, arguments);
@@ -82,7 +82,7 @@ Events 对象提供了以下api
 
 ####off `object.on([event],[callback],[context]) Alias unbind`
 `off`方法主要用于事件的解除，实现代码如下：
-{% codeblock [lang:javascript ] [off]%}
+{% codeblock lang:javascript %}
 	  off: function(name, callback, context) {
 	      var retain, ev, events, names, i, l, j, k;
 	      if (!this._events || !eventsApi(this, 'off', name, [callback, context])) return this;
@@ -117,7 +117,7 @@ Events 对象提供了以下api
 
 ####trigger `object.trigger(event,[*args])`
 `trigger`方法主要用于将绑定好的事件进行触发，代码如下：
-{% codeblock [lang:javascript ] [trigger]%}	
+{% codeblock lang:javascript %}	
 	trigger: function(name) {
       if (!this._events) return this;
       var args = slice.call(arguments, 1);
@@ -130,7 +130,7 @@ Events 对象提供了以下api
     }
 {% endcodeblock %}	
 `trigger`方法首先对参数进行分割 , 将自定义参数的放入 `args` 中 , 然后进行 `eventApi` 检查,再从`_events`中 获取对应的事件，再获取 `all`事件，然后进行触发调用 `triggerEvents`, 代码如下：
-{% codeblock [lang:javascript ] [triggerEvents]%}
+{% codeblock lang:javascript %}
 	 var triggerEvents = function(events, args) {
 	    var ev, i = -1, l = events.length, a1 = args[0], a2 = args[1], a3 = args[2];
 	    switch (args.length) {
