@@ -8,7 +8,7 @@ categories: ["backbone","js"]
 
 开始对前端的MVC框架 [Backbone.js](http://backbonejs.org/)进行学习，会从Event、Model、Collection、View等几个模块进行解析和源码阅读。
 
-<! -- more -->
+<!-- more -->
 
 ###目录
 1. [Backbone.Event](blog/2014/12/04/backbone.Events/index.html)
