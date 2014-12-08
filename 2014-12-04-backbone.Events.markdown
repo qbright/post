@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Backbone学习 --- Backbone.Events"
+title: "Backbone源码学习 --- Backbone.Events"
 date: 2014-12-04 14:45:04 +0800
 comments: true
 categories:  ["backbone","js"]
