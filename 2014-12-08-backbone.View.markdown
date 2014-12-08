@@ -1,0 +1,125 @@
+---
+layout: post
+title: "backbone.View"
+date: 2014-12-08 15:38:34 +0800
+comments: true
+categories: ["backbone.js","js"]
+---
+
+前面已经对backbone中的Event、Model、Collection代码进行了分析，现在我们来看下MVC中的`V`部分，也就是`Backbone.View`，View在Backbone中主要用于沟通页面中的DOM和`Backbone.Model/Collection`，页面的逻辑操作，DOM事件的绑定等，View部分的代码非常简答，加上注释只有110左右。
+View部分有一下API：
+
+![](https://raw.githubusercontent.com/qbright/post/master/image/20141208155302.png)
+
+<!-- more -->
+方法不多，下面对部分API进行介绍:
+
+####构造方法
+
+{% codeblock lang:javascript %}
+	var viewOptions = ['model', 'collection', 'el', 'id', 'attributes', 'className', 'tagName', 'events'];
+	var View = Backbone.View = function(options) {
+	    this.cid = _.uniqueId('view');
+	    options || (options = {});
+	    _.extend(this, _.pick(options, viewOptions));
+	    this._ensureElement();
+	    this.initialize.apply(this, arguments);
+	    this.delegateEvents();
+	};
+
+{% endcodeblock %}
+
+构造方法中为View生成了一个唯一的cid,以'view'开头,然后进行对目标属性viewOptions进行合并，接着调用`_ensureElement`判断el的情况，接着调用`delegateEvents`进行方法绑定，初始化完成 。
+
+####delegateEvents
+`view.setElement(element) `
+
+{% codeblock lang:javascript %}
+
+	  setElement: function(element, delegate) {
+	      if (this.$el) this.undelegateEvents();//如果已经存在this.$el，进行事件解绑
+
+	      //对$el进行赋值，本质是一个jquery或者是 Lo-Dash and Zepto 对象
+	      this.$el = element instanceof Backbone.$ ? element : Backbone.$(element);
+		  //把dom element 赋值给el
+	      this.el = this.$el[0];
+
+          //如果没有显式传值,则进行事件绑定
+	      if (delegate !== false) this.delegateEvents();
+	      return this;
+	    }
+
+{% endcodeblock %}
+
+`setElement`方法用于设置`View`对应的`element` , 这个方法在`new`的时候会被调用， 如果想要在使用过程中改变`View`的`dom`元素指向，可调用这个方法进行重新设置
+
+
+####_ensureElement
+
+{% codeblock lang:javascript %}
+	 _ensureElement: function() {
+			//如果已经对el进行设置，直接调用setElement方法
+	      if (!this.el) {//如果没有设置，生成一个元素对象，再调用setElement方法
+	        var attrs = _.extend({}, _.result(this, 'attributes'));
+	        if (this.id) attrs.id = _.result(this, 'id');
+	        if (this.className) attrs['class'] = _.result(this, 'className');
+	        var $el = Backbone.$('<' + _.result(this, 'tagName') + '>').attr(attrs);
+	        this.setElement($el, false);
+	      } else {
+	        this.setElement(_.result(this, 'el'), false);
+	      }
+    }
+{% endcodeblock %}
+
+`_ensureElement`这个方法是内部方法，在构造函数中使用，用于判断指定的`el`在页面中存不存在，如果存在则对`$el`进行赋值，如果不存在，则生成一个`$el`,但是要注意这个对象是没有落地到`dom`树中的 。
+
+
+####delegateEvents
+
+`delegateEvents([events])` 
+
+{% codeblock lang:javascript %}
+
+	    // *{"event selector": "callback"}*
+	    //
+	    //     {
+	    //       'mousedown .title':  'edit',
+	    //       'click .button':     'save',
+	    //       'click .open':       function(e) { ... }
+	    //     }
+
+	    delegateEvents: function(events) {
+		      //如果不存在events,则直接返回
+		      if (!(events || (events = _.result(this, 'events')))) return this;
+		      
+		      //先解除所有的事件绑定
+		      this.undelegateEvents();
+		      
+		      //处理每个事件
+		      for (var key in events) {
+		        var method = events[key];
+		        //解析回调函数
+		        if (!_.isFunction(method)) method = this[events[key]];
+		        if (!method) continue;
+		          
+		        //对选择器进行分析
+		        var match = key.match(delegateEventSplitter);
+		        var eventName = match[1], selector = match[2];
+		        method = _.bind(method, this);
+		        
+		        //绑定的事件名都是以 eventName + '.delegateEvents' + cid 组成,
+		        //这么做能够在undelegateEvents的时候选择到这个View的所有事件
+		        eventName += '.delegateEvents' + this.cid;
+		        if (selector === '') {
+		          this.$el.on(eventName, method);
+		        } else {
+		          this.$el.on(eventName, selector, method);
+		        }
+		      }
+		      return this;
+    	}
+{% endcodeblock %}
+
+在View中你可以使用一个 key:value 集合指定对应的事件，在初始化的时候构造函数会调用delegateEvents进行绑定，需要注意的是所有在key中指定的元素的父元素都必须是$el,也就是说元素必须是$el的子节点，否则绑定失败。
+
+View和其他backbone模块一个区别就是没有自己的内建自定义事件，当然他也组合了Events模块，但是所有的事件都需要自己进行建立。View主要是一个MVC模型的承载，其实真正的功能不多，其实从模型层面上看V在前端开发中是最接近业务逻辑的，所以在View中大部分的逻辑都是开发者自己去扩展的。
