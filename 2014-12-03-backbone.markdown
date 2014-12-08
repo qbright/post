@@ -14,3 +14,4 @@ categories: ["backbone","js"]
 1. [Backbone.Event](http://qbright.github.io/blog/2014/12/04/backbone.Events/)
 2. [Backbone.Model](http://qbright.github.io/blog/2014/12/04/backbone.Model/)
 3. [Backbone.Collection](http://qbright.github.io/blog/2014/12/08/backbone.Collectioin/)
+4. [Backbone.View](http://qbright.github.io/blog/2014/12/08/backbone.View/)
