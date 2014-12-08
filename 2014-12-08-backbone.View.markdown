@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "backbone.View"
+title: "Backbone源码学习 --- Backbone.View"
 date: 2014-12-08 15:38:34 +0800
 comments: true
 categories: ["backbone.js","js"]
